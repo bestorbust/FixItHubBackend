@@ -405,13 +405,17 @@ def get_issues():
                 print(f"Location Parsing Error: {e}")
                 issue["location"] = "Location not available"
 
-            if "images" in issue and isinstance(issue["images"], list):
-                issue["images"] = [
-                    f"http://127.0.0.1:5000/{img.replace(os.sep, '/')}" for img in issue["images"]
-                    # f"http://127.0.0.1:5000/{img.replace('\\', '/')}" for img in issue["images"]
-                ]
+            if "images" in issue and isinstance(issue["images"],list):
+                issue["images"]=issue["images"]
             else:
-                issue["images"] = []
+                issue["images"]=[]
+            # if "images" in issue and isinstance(issue["images"], list):
+            #     issue["images"] = [
+            #         f"http://127.0.0.1:5000/{img.replace(os.sep, '/')}" for img in issue["images"]
+            #         # f"http://127.0.0.1:5000/{img.replace('\\', '/')}" for img in issue["images"]
+            #     ]
+            # else:
+            #     issue["images"] = []
 
         return jsonify(issues), 200
     except Exception as e:
