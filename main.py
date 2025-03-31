@@ -378,7 +378,8 @@ def get_issues():
 
             if "images" in issue and isinstance(issue["images"], list):
                 issue["images"] = [
-                    f"http://127.0.0.1:5000/{img.replace('\\', '/')}" for img in issue["images"]
+                    f"http://127.0.0.1:5000/{img.replace(os.sep, '/')}" for img in issue["images"]
+                    # f"http://127.0.0.1:5000/{img.replace('\\', '/')}" for img in issue["images"]
                 ]
             else:
                 issue["images"] = []
