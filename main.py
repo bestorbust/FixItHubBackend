@@ -10,6 +10,8 @@ from geopy.distance import geodesic
 import os
 import requests
 import time
+import cloudinary
+import cloudinary.uploader
 # Load environment variables
 load_dotenv()
 
@@ -56,14 +58,21 @@ except Exception as e:
     print(f"MongoDB Connection Error: {str(e)}")
 
 #  Ensure upload directory exists
-UPLOAD_FOLDER = "uploads"
-BASE_URL = "http://127.0.0.1:5000"
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+# UPLOAD_FOLDER = "uploads"
 
-@app.route('/uploads/<path:filename>')
-def serve_image(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+cloudinary.config(
+    cloud_name="dz9pqcxoz",
+    api_key="727454876368522",
+    api_secret="duLiyH62f5XvxlzX4O4nk6G33Yg"
+)
+
+BASE_URL = "http://127.0.0.1:5000"
+# if not os.path.exists(UPLOAD_FOLDER):
+#     os.makedirs(UPLOAD_FOLDER)
+
+# @app.route('/uploads/<path:filename>')
+# def serve_image(filename):
+#     return send_from_directory(UPLOAD_FOLDER, filename)
 
 #  Default Admin Setup
 admin_email = "authority@gmail.com"
@@ -149,6 +158,16 @@ def get_latest_issues():
 def home():
     return jsonify({"message": "Welcome to the API!"})
 
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    file = request.files['file']
+    result = cloudinary.uploader.upload(file)
+
+    return jsonify({"url": result["secure_url"]}), 200
+
 #  User Registration
 @app.route('/register', methods=['POST'])
 def register():
@@ -206,7 +225,6 @@ def report_issue():
         return response, 200  # Return a successful OPTIONS response
 
     try:
-        # Handle POST request (your existing logic)
         current_user = get_jwt_identity()
         user = users_collection.find_one({"email": current_user})
         if not user:
@@ -223,12 +241,19 @@ def report_issue():
         tags = request.form.getlist("tags")
 
         # Save images
+        # image_urls = []
+        # for file in files:
+        #     if file:
+        #         filename = os.path.join(UPLOAD_FOLDER, file.filename)
+        #         file.save(filename)
+        #         image_urls.append(filename)
+
+        # Upload images to Cloudinary
         image_urls = []
         for file in files:
             if file:
-                filename = os.path.join(UPLOAD_FOLDER, file.filename)
-                file.save(filename)
-                image_urls.append(filename)
+                upload_result = cloudinary.uploader.upload(file)
+                image_urls.append(upload_result["secure_url"])
 
         location_data = data["location"].strip()
         if "," in location_data:
@@ -377,7 +402,7 @@ def get_issues():
             try:
                 issue["location"] = parse_location(issue)  # Safe location parsing
             except Exception as e:
-                print(f"❌ Location Parsing Error: {e}")
+                print(f"Location Parsing Error: {e}")
                 issue["location"] = "Location not available"
 
             if "images" in issue and isinstance(issue["images"], list):
@@ -482,11 +507,17 @@ def user_profile():
     if not user:
         return jsonify({"message": "User not found"}), 404
     
+
     if "profile_pic" in user and user["profile_pic"]:
-        filename = os.path.basename(user["profile_pic"])
-        user["profile_pic"] = f"http://127.0.0.1:5000/uploads/{filename}"
+        user["profile_pic"] = user["profile_pic"]  # Use stored Cloudinary URL
     else:
-        user["profile_pic"] = "" 
+        user["profile_pic"] = ""
+
+    # if "profile_pic" in user and user["profile_pic"]:
+    #     filename = os.path.basename(user["profile_pic"])
+    #     user["profile_pic"] = f"http://127.0.0.1:5000/uploads/{filename}"
+    # else:
+    #     user["profile_pic"] = "" 
 
 
     if request.method == 'GET':
@@ -502,10 +533,12 @@ def user_profile():
         if "profile_pic" in request.files:
             file = request.files["profile_pic"]
             if file.filename:
-                filename = f"{current_user}_{file.filename}"
-                file_path = os.path.join(UPLOAD_FOLDER, filename)
-                file.save(file_path)
-                profile_pic_url = f"/profile_pics/{filename}"  # Return relative URL
+                result = cloudinary.uploader.upload(file)
+                profile_pic_url=result["secure_url"]
+                # filename = f"{current_user}_{file.filename}"
+                # file_path = os.path.join(UPLOAD_FOLDER, filename)
+                # file.save(file_path)
+                # profile_pic_url = f"/profile_pics/{filename}"  # Return relative URL
 
         update_data = {
             "full_name": data.get("full_name", user.get("full_name")),
@@ -535,11 +568,12 @@ def admin_profile():
         return jsonify({"message": "Admin not found"}), 404
 
     # Convert profile_pic to full URL
-    if "profile_pic" in admin and admin["profile_pic"]:
-        filename = os.path.basename(admin["profile_pic"])
-        admin["profile_pic"] = f"http://127.0.0.1:5000/uploads/{filename}"
-    else:
-        admin["profile_pic"] = ""  # Return empty if no profile pic exists
+    # if "profile_pic" in admin and admin["profile_pic"]:
+    #     filename = os.path.basename(admin["profile_pic"])
+    #     admin["profile_pic"] = f"http://127.0.0.1:5000/uploads/{filename}"
+    # else:
+    #     admin["profile_pic"] = ""  # Return empty if no profile pic exists
+    profile_pic_url = admin.get("profile_pic", "")
 
     if request.method == 'GET':
         admin.pop("_id", None)
@@ -550,14 +584,16 @@ def admin_profile():
         if 'profile_pic' in request.files:
             file = request.files['profile_pic']
             if file.filename:
-                filename = f"{current_admin}_{file.filename}"
-                file_path = os.path.join(UPLOAD_FOLDER, filename)
-                file.save(file_path)
-                profile_pic_url = f"http://127.0.0.1:5000/uploads/{filename}"
-            else:
-                profile_pic_url = admin.get("profile_pic", "")
-        else:
-            profile_pic_url = admin.get("profile_pic", "")
+                result = cloudinary.uploader.upload(file)
+                profile_pic_url = result["secure_url"]
+        #         filename = f"{current_admin}_{file.filename}"
+        #         file_path = os.path.join(UPLOAD_FOLDER, filename)
+        #         file.save(file_path)
+        #         profile_pic_url = f"http://127.0.0.1:5000/uploads/{filename}"
+        #     else:
+        #         profile_pic_url = admin.get("profile_pic", "")
+        # else:
+        #     profile_pic_url = admin.get("profile_pic", "")
 
         data = request.form.to_dict()
 
