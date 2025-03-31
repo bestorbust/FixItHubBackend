@@ -77,14 +77,14 @@ def get_address_from_coordinates(lat, lon):
     access_token = "pk.7717a7620b6c44435424f84074969fab"
     
     if not access_token:
-        print("❌ ERROR: Missing LocationIQ API Key")
+        print(" ERROR: Missing LocationIQ API Key")
         return "API Key Missing"
 
     url = f"https://us1.locationiq.com/v1/reverse.php?key={access_token}&lat={lat}&lon={lon}&format=json"
     
     for attempt in range(3):  # Retry up to 3 times
         try:
-            print(f"🔍 Requesting address for ({lat}, {lon})... Attempt {attempt+1}")
+            print(f"Requesting address for ({lat}, {lon})... Attempt {attempt+1}")
             response = requests.get(url, timeout=5)  # Set timeout
             if response.status_code == 200:
                 data = response.json()
@@ -144,6 +144,10 @@ def get_latest_issues():
     except Exception as e:
         print("ERROR: Fetching issues failed:", str(e))
         return jsonify({"error": str(e)}), 500
+
+@app.route("/")
+def home():
+    return jsonify({"message": "Welcome to the API!"})
 
 #  User Registration
 @app.route('/register', methods=['POST'])
