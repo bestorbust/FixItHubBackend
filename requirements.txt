@@ -7,3 +7,4 @@ python-dotenv==1.0.1
 geopy==2.4.1
 requests==2.31.0
 gunicorn==21.2.0
+cloudinary==1.37.0
