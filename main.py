@@ -21,24 +21,8 @@ bcrypt = Bcrypt(app)
 app.config['JWT_SECRET_KEY'] = os.urandom(24)
 jwt = JWTManager(app)
 access_token = "pk.7717a7620b6c44435424f84074969fab"
+
 # MongoDB Connection
-# try:
-#     client = MongoClient(os.getenv("MONGO_URI", "mongodb://localhost:27017/"))
-#     db = client["community_issue_platform"]
-#     users_collection = db["users"]
-#     issues_collection = db["issues"]
-#     comments_collection = db["comments"]
-#     admin_collection = db["admin"]
-#     print(" Connected to MongoDB")
-
-#     #  Add indexing for performance
-#     users_collection.create_index("email", unique=True)
-#     issues_collection.create_index("reported_at")
-#     comments_collection.create_index("issue_id")
-
-# except Exception as e:
-#     print(f"MongoDB Connection Error: {str(e)}")
-
 try:
     MONGO_URI = os.getenv("MONGO_URI")
     client = MongoClient(MONGO_URI)
@@ -57,9 +41,6 @@ try:
 except Exception as e:
     print(f"MongoDB Connection Error: {str(e)}")
 
-#  Ensure upload directory exists
-# UPLOAD_FOLDER = "uploads"
-
 cloudinary.config(
     cloud_name="dz9pqcxoz",
     api_key="727454876368522",
@@ -67,12 +48,36 @@ cloudinary.config(
 )
 
 BASE_URL = "http://127.0.0.1:5000"
+
+# MongoDB Connection
+# try:
+#     client = MongoClient(os.getenv("MONGO_URI", "mongodb://localhost:27017/"))
+#     db = client["community_issue_platform"]
+#     users_collection = db["users"]
+#     issues_collection = db["issues"]
+#     comments_collection = db["comments"]
+#     admin_collection = db["admin"]
+#     print(" Connected to MongoDB")
+
+#     #  Add indexing for performance
+#     users_collection.create_index("email", unique=True)
+#     issues_collection.create_index("reported_at")
+#     comments_collection.create_index("issue_id")
+
+# except Exception as e:
+#     print(f"MongoDB Connection Error: {str(e)}")
+
 # if not os.path.exists(UPLOAD_FOLDER):
 #     os.makedirs(UPLOAD_FOLDER)
 
 # @app.route('/uploads/<path:filename>')
 # def serve_image(filename):
 #     return send_from_directory(UPLOAD_FOLDER, filename)
+
+
+#  Ensure upload directory exists
+# UPLOAD_FOLDER = "uploads"
+
 
 #  Default Admin Setup
 admin_email = "authority@gmail.com"
@@ -302,6 +307,36 @@ def get_my_issues():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/reopen_issue/<issue_id>', methods=['PUT'])
+@jwt_required()
+def reopen_issue(issue_id):
+    try:
+        if not ObjectId.is_valid(issue_id):
+            return jsonify({"message": "Invalid issue ID"}), 400
+
+        current_user = get_jwt_identity()
+        issue = issues_collection.find_one({"_id": ObjectId(issue_id)})
+
+        if not issue:
+            return jsonify({"message": "Issue not found"}), 404
+
+        # Only allow the user who reported the issue to reopen it
+        if issue["user_email"] != current_user:
+            return jsonify({"message": "Unauthorized"}), 403
+
+        if issue["status"] != "Completed":
+            return jsonify({"message": "Only completed issues can be reopened"}), 400
+
+        # Update the status to "Reopened"
+        issues_collection.update_one(
+            {"_id": ObjectId(issue_id)},
+            {"$set": {"status": "Reopened"}}
+        )
+
+        return jsonify({"message": "Issue reopened successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # Edit an Issue
 @app.route('/edit_issue/<issue_id>', methods=['PUT'])
