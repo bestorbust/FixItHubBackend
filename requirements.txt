@@ -8,7 +8,7 @@ geopy==2.4.1
 requests==2.31.0
 gunicorn==21.2.0
 cloudinary==1.37.0
-flask_testing==0.8
-pytest==7.2.0
-pytest-flask==1.2.0
-mock==4.0.3
+flask_testing
+pytest
+pytest-flask
+mock
