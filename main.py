@@ -220,7 +220,7 @@ def login():
 
 
 @app.route('/report_issue', methods=['POST', 'OPTIONS'])
-@jwt_required(optional=True)  # Optional for OPTIONS request to avoid auth error
+@jwt_required(optional=True)
 def report_issue():
     if request.method == 'OPTIONS':
         response = jsonify({"message": "CORS Preflight OK"})
@@ -305,6 +305,7 @@ def get_my_issues():
         return jsonify(issues), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
 @app.route('/reopen_issue/<issue_id>', methods=['PATCH'])
 @jwt_required()
 def reopen_issue(issue_id):
