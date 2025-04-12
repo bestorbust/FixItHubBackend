@@ -305,38 +305,34 @@ def get_my_issues():
         return jsonify(issues), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
-@app.route('/reopen_issue/<issue_id>', methods=['PUT'])
+@app.route('/reopen_issue/<issue_id>', methods=['PATCH'])
 @jwt_required()
 def reopen_issue(issue_id):
     try:
+        current_user = get_jwt_identity()
+        
         if not ObjectId.is_valid(issue_id):
             return jsonify({"message": "Invalid issue ID"}), 400
 
-        current_user = get_jwt_identity()
         issue = issues_collection.find_one({"_id": ObjectId(issue_id)})
 
         if not issue:
             return jsonify({"message": "Issue not found"}), 404
 
-        # Only allow the user who reported the issue to reopen it
+        # Only the reporter or an admin can reopen the issue
         if issue["user_email"] != current_user:
-            return jsonify({"message": "Unauthorized"}), 403
+            user = users_collection.find_one({"email": current_user})
+            if not user:
+                user = admin_collection.find_one({"email": current_user})
+                if not user or user.get("role") != "Admin":
+                    return jsonify({"message": "Unauthorized"}), 403
 
-        if issue["status"] != "Completed":
-            return jsonify({"message": "Only completed issues can be reopened"}), 400
-
-        # Update the status to "Reopened"
-        issues_collection.update_one(
-            {"_id": ObjectId(issue_id)},
-            {"$set": {"status": "Reopened"}}
-        )
-
+        issues_collection.update_one({"_id": ObjectId(issue_id)}, {"$set": {"status": "Pending"}})
         return jsonify({"message": "Issue reopened successfully"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # Edit an Issue
 @app.route('/edit_issue/<issue_id>', methods=['PUT'])
